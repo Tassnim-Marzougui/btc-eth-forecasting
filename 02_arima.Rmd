@@ -1,0 +1,219 @@
+---
+title: "02 - ARIMA / SARIMA (R)"
+author: "tassnim marzougui"
+date: "2026-10-06"
+output: html_document
+---
+## 1. Chargement
+
+```{r}
+library(xts)        # séries temporelles
+library(tseries)    # Jarque-Bera
+library(forecast)   # Arima, auto.arima, forecast
+library(jsonlite)   # lire split.json
+set.seed(42)        # reproductibilité
+
+raw <- read.csv("data/btc_eth.csv")                       # même csv que Python
+raw$date <- as.Date(raw$date)
+x <- xts(raw[, c("btc_close", "eth_close")], order.by = raw$date)
+x$btc_logp <- log(x$btc_close)                            # log-prix BTC
+x$eth_logp <- log(x$eth_close)                            # log-prix ETH
+
+split <- fromJSON("data/split.json")                      # même split que Python
+train_end  <- as.Date(split$train_end)
+test_start <- as.Date(split$test_start)
+
+H <- 10      # horizon de prévision (10 jours)
+D <- 1       # ordre de différenciation (conclu par ADF/KPSS)
+
+cat("Train jusqu'au", split$train_end, "| test à partir du", split$test_start, "\n")
+
+```
+## 2. ACF / PACF du log-prix différencié
+```{r, fig.width=10, fig.height=6}
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))                            # 4 graphes sur une page
+for (a in c("btc", "eth")) {
+  y <- as.numeric(x[paste0("/", train_end), paste0(a, "_logp")])    # log-prix, train seulement
+  acf(diff(y), lag.max = 30, main = paste(toupper(a), "- ACF diff log-prix"))
+  pacf(diff(y), lag.max = 30, main = paste(toupper(a), "- PACF diff log-prix"))
+}
+```
+## 3. Choix des ordres
+
+```{r}
+ordres <- data.frame()                                   # tableau des résultats
+for (a in c("btc", "eth")) {
+  y <- as.numeric(x[paste0("/", train_end), paste0(a, "_logp")])
+
+  # grille manuelle : p, q de 0 à 2, sans et avec dérive
+  for (p in 0:2) for (q in 0:2) for (drift in c(FALSE, TRUE)) {
+    m <- Arima(y, order = c(p, D, q), include.drift = drift, method = "ML")
+    ordres <- rbind(ordres, data.frame(actif = toupper(a), methode = "manuelle",
+                                       p = p, q = q, drift = drift, AIC = m$aic, BIC = m$bic))
+  }
+
+  # sélection automatique
+  auto <- auto.arima(y, d = D, seasonal = FALSE, ic = "aic", stepwise = TRUE, approximation = FALSE)
+  o <- arimaorder(auto)                                  # ordres choisis (p, d, q)
+  drift <- "drift" %in% names(coef(auto))                # dérive incluse ou non
+  m <- Arima(y, order = o, include.drift = drift, method = "ML")
+  ordres <- rbind(ordres, data.frame(actif = toupper(a), methode = "auto.arima",
+                                     p = o[1], q = o[3], drift = drift, AIC = m$aic, BIC = m$bic))
+}
+
+dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+write.csv(ordres, "results/tables/02_selection_ordres_R.csv", row.names = FALSE)
+
+# top 5 par BIC pour chaque actif
+for (a in c("BTC", "ETH")) {
+  t <- ordres[ordres$actif == a, ]
+  print(head(t[order(t$BIC), ], 5), digits = 7)
+}
+```
+## 4. Diagnostic des résidus et SARIMA
+
+```{r, fig.width=10, fig.height=6}
+# test ARCH-LM d'Engle (écrit à la main)
+arch_lm <- function(e, lags = 10) {
+  X <- embed(e^2, lags + 1)                                   # e² et ses 10 retards
+  stat <- nrow(X) * summary(lm(X[, 1] ~ X[, -1]))$r.squared   # n * R²
+  c(stat = stat, p = 1 - pchisq(stat, lags))                  # suit un Chi2(10) sous H0
+}
+
+retenus <- list()       # modèles gardés pour les prévisions
+diags <- data.frame()
+
+for (a in c("btc", "eth")) {
+  y <- as.numeric(x[paste0("/", train_end), paste0(a, "_logp")])
+  t <- ordres[ordres$actif == toupper(a), ]
+
+  for (crit in c("BIC", "AIC")) {
+    b <- t[which.min(t[[crit]]), ]                            # meilleur modèle selon le critère
+    deja <- Filter(function(r) r$a == a && !isTRUE(r$saison) &&
+                     r$p == b$p && r$q == b$q && r$drift == b$drift, retenus)
+    if (length(deja) > 0) next                                # même modèle que le BIC -> on saute
+    retenus[[length(retenus) + 1]] <- list(a = a, crit = crit, p = b$p, q = b$q, drift = b$drift)
+
+    m <- Arima(y, order = c(b$p, D, b$q), include.drift = b$drift, method = "ML")
+    e <- as.numeric(residuals(m))[-1]                         # résidus (sans le 1er)
+    k <- length(coef(m))                                      # nb de paramètres estimés
+    nom <- sprintf("%s ARIMA(%d,1,%d)%s (%s)", toupper(a), b$p, b$q,
+                   ifelse(b$drift, " + derive", ""), crit)
+
+    diags <- rbind(diags, data.frame(
+      modele    = nom,
+      LB_p_10   = Box.test(e, lag = 10, type = "Ljung-Box", fitdf = k)$p.value,   # autocorrélation
+      LB_p_20   = Box.test(e, lag = 20, type = "Ljung-Box", fitdf = k)$p.value,
+      JB_p      = jarque.bera.test(e)$p.value,                                    # normalité
+      Shapiro_p = shapiro.test(tail(e, 5000))$p.value,
+      ARCH_LM_p = arch_lm(e)["p"]))                                               # effet ARCH
+
+    checkresiduals(m, test = FALSE)                           # graphes des résidus
+  }
+
+  # SARIMA : saisonnalité hebdo (s = 7) ajoutée au dernier modèle
+  sar <- Arima(ts(y, frequency = 7), order = c(b$p, D, b$q), seasonal = c(1, 0, 1),
+               include.drift = b$drift, method = "ML")
+  z <- coef(sar)[c("sar1", "sma1")] / sqrt(diag(sar$var.coef))[c("sar1", "sma1")]   # stat z
+  p_saison <- 2 * (1 - pnorm(abs(z)))                                                # p-values
+  garder <- (sar$aic < m$aic) && any(p_saison < 0.05)
+  cat(toupper(a), "SARIMA : AIC", round(sar$aic, 1), "vs ARIMA", round(m$aic, 1),
+      "| p saisonniers", round(p_saison, 4), ifelse(garder, "-> gardé", "-> rejeté"), "\n")
+  if (garder) retenus[[length(retenus) + 1]] <- list(a = a, crit = "SARIMA", p = b$p, q = b$q,
+                                                     drift = b$drift, saison = TRUE)
+}
+
+rownames(diags) <- NULL
+write.csv(diags, "results/tables/02_diagnostic_residus_R.csv", row.names = FALSE)
+print(diags, digits = 3)
+```
+## 5. Prévisions et évaluation
+
+```{r, fig.width=10, fig.height=4}
+# prévision à 10 jours depuis une origine sur 10 dans le test
+rolling_origin <- function(a, prevoir) {
+  lp   <- x[, paste0(a, "_logp")]
+  prix <- x[, paste0(a, "_close")]
+  origines <- seq(test_start, end(x), by = 10)                    # une origine tous les 10 jours
+  origines <- origines[origines + H - 1 <= end(x)]                # assez de jours pour comparer
+  do.call(rbind, lapply(origines, function(o) {
+    hist  <- as.numeric(lp[paste0("/", o - 1)])                   # seulement le passé
+    f     <- prevoir(hist)
+    dates <- seq(o, by = "day", length.out = H)
+    data.frame(origin = o, date = dates, h = 1:H, y_true = as.numeric(prix[dates]),
+               y_pred = exp(f$moy), lo95 = exp(f$bas), hi95 = exp(f$haut))   # retour en USD
+  }))
+}
+
+# ARIMA / SARIMA ré-estimé à chaque origine
+prev_arima <- function(p, q, drift, saison = FALSE) {
+  force(p); force(q); force(drift); force(saison)                 # fige les paramètres
+  function(hist) {
+    m <- if (saison) Arima(ts(hist, frequency = 7), order = c(p, D, q), seasonal = c(1, 0, 1),
+                           include.drift = drift, method = "ML")
+         else Arima(hist, order = c(p, D, q), include.drift = drift, method = "ML")
+    fc <- forecast(m, h = H, level = 95)                          # prévision + IC 95 %
+    list(moy = as.numeric(fc$mean), bas = as.numeric(fc$lower), haut = as.numeric(fc$upper))
+  }
+}
+
+# baselines
+naive_f <- function(hist) list(moy = rep(tail(hist, 1), H), bas = rep(NA, H), haut = rep(NA, H))  # demain = aujourd'hui
+drift_f <- function(hist) {                                                                      # tendance moyenne
+  pente <- (tail(hist, 1) - hist[1]) / (length(hist) - 1)
+  list(moy = tail(hist, 1) + pente * (1:H), bas = rep(NA, H), haut = rep(NA, H))
+}
+
+# métriques sur le prix en USD
+metriques <- function(fc) {
+  e <- fc$y_true - fc$y_pred
+  data.frame(MSE = mean(e^2), RMSE = sqrt(mean(e^2)), MAE = mean(abs(e)),
+             MAPE = 100 * mean(abs(e / fc$y_true)))
+}
+
+resultats <- data.frame()
+for (a in c("btc", "eth")) {
+  # liste des modèles à évaluer pour cet actif
+  candidats <- list()
+  for (r in Filter(function(r) r$a == a, retenus)) {
+    nom <- if (isTRUE(r$saison)) paste0("SARIMA(", r$p, ",1,", r$q, ")(1,0,1)[7]")
+           else paste0("ARIMA(", r$p, ",1,", r$q, ") (", r$crit, ")")
+    candidats[[length(candidats) + 1]] <- list(nom = nom, code = paste0("arima_", tolower(r$crit)),
+                                               f = prev_arima(r$p, r$q, r$drift, isTRUE(r$saison)))
+  }
+  candidats <- c(candidats, list(list(nom = "Naive", code = "naive", f = naive_f),
+                                 list(nom = "Drift", code = "drift", f = drift_f)))
+
+  for (cd in candidats) {
+    t0 <- Sys.time()
+    fc <- rolling_origin(a, cd$f)
+    duree <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+    write.csv(fc, paste0("results/tables/forecasts_", cd$code, "_", a, "_R.csv"), row.names = FALSE)
+    couv <- if (all(is.na(fc$lo95))) NA else mean(fc$y_true >= fc$lo95 & fc$y_true <= fc$hi95)
+    resultats <- rbind(resultats, cbind(data.frame(actif = toupper(a), modele = cd$nom),
+                                        metriques(fc), couverture_IC95 = couv, temps_s = duree))
+
+    # graphe : observé + prévisions + IC 95 %
+    if (startsWith(cd$code, "arima")) {
+      obs <- x[paste0(test_start, "/"), paste0(a, "_close")]
+      plot(index(obs), as.numeric(obs), type = "l", xlab = "", ylab = "USD",
+           ylim = range(c(as.numeric(obs), fc$lo95, fc$hi95), na.rm = TRUE),
+           main = paste(toupper(a), "-", cd$nom))
+      for (o in unique(fc$origin)) {
+        g <- fc[fc$origin == o, ]
+        polygon(c(g$date, rev(g$date)), c(g$lo95, rev(g$hi95)), col = rgb(0, 0, 1, 0.15), border = NA)
+        lines(g$date, g$y_pred, col = "blue")
+      }
+    }
+  }
+}
+
+write.csv(resultats, "results/tables/02_metriques_R.csv", row.names = FALSE)
+print(resultats, digits = 4)
+```
+
+## Informations de session
+
+```{r}
+sessionInfo()
+```

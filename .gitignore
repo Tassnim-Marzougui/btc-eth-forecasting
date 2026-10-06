@@ -1,0 +1,7 @@
+.ipynb_checkpoints/
+__pycache__/
+.Rhistory
+.RData
+.Rproj.user/
+*_cache/
+*_files/

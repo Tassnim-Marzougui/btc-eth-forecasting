@@ -255,8 +255,9 @@ print('='*60)
 all_dates = df.index
 test_dates = test.index
 
-btc_full_ret = df['btc_ret'] * 100
-eth_full_ret = df['eth_ret'] * 100
+# FIX : on retire NaN / inf (ex: premier rendement) avant de passer à arch_model
+btc_full_ret = (df['btc_ret'] * 100).replace([np.inf, -np.inf], np.nan).dropna()
+eth_full_ret = (df['eth_ret'] * 100).replace([np.inf, -np.inf], np.nan).dropna()
 
 btc_var_forecast = []
 eth_var_forecast = []

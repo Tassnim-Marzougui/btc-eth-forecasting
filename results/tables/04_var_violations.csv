@@ -1,0 +1,5 @@
+Asset,VaR_Level,Violation_Rate,Expected_Rate
+BTC,5%,0.021875,0.05
+BTC,1%,0.0125,0.01
+ETH,5%,0.021875,0.05
+ETH,1%,0.015625,0.01

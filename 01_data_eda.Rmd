@@ -1,0 +1,177 @@
+---
+title: "01 - Données et analyse exploratoire (R)"
+author: "tassnim marzougui"
+date: "2026-10-06"
+output: html_document
+---
+
+## 1. Packages
+
+```{r, eval=FALSE}
+# installer les packages (une seule fois)
+install.packages(c("xts", "zoo", "tseries", "forecast", "jsonlite"))
+```
+
+## 2. Chargement des données
+
+```{r}
+library(xts)        # séries temporelles
+library(zoo)        # fenêtres glissantes, na.locf
+library(tseries)    # ADF, KPSS, Jarque-Bera
+library(forecast)   # ARIMA, auto.arima
+library(jsonlite)   # lire split.json
+set.seed(42)        # reproductibilité
+
+# même csv que Python
+raw <- read.csv("data/btc_eth.csv")
+raw$date <- as.Date(raw$date)
+x <- xts(raw[, c("btc_close", "eth_close", "btc_volume", "eth_volume")], order.by = raw$date)
+
+cat("Période :", format(start(x)), "->", format(end(x)), "\n")
+cat("Nb lignes :", nrow(x), "\n")
+head(x)
+```
+
+## 3. Nettoyage, variables dérivées et split
+
+```{r}
+# une ligne par jour (crypto = 7 j / 7)
+jours <- seq(start(x), end(x), by = "day")
+cat("Jours manquants :", length(setdiff(jours, index(x))), "\n")
+cat("Doublons :", sum(duplicated(index(x))), "\n")
+cat("NaN :", sum(is.na(x)), "\n")
+
+x <- merge(x, xts(, jours))     # ajoute les jours manquants (NaN)
+x <- na.locf(x)                 # remplit avec la dernière valeur connue
+
+# variables dérivées
+for (a in c("btc", "eth")) {
+  lp <- log(x[, paste0(a, "_close")])                                       # log-prix
+  x  <- merge(x, setNames(lp, paste0(a, "_logp")))
+  x  <- merge(x, setNames(diff(lp), paste0(a, "_ret")))                     # log-rendement
+  x  <- merge(x, setNames(rollmeanr(x[, paste0(a, "_close")], 50, fill = NA), paste0(a, "_ma50")))
+  x  <- merge(x, setNames(rollmeanr(x[, paste0(a, "_close")], 200, fill = NA), paste0(a, "_ma200")))
+  x  <- merge(x, setNames(rollapplyr(x[, paste0(a, "_ret")], 30, sd, fill = NA) * sqrt(365),
+                          paste0(a, "_vol30")))                             # volatilité 30 j annualisée
+}
+
+# même split que Python
+split <- fromJSON("data/split.json")
+train_end  <- as.Date(split$train_end)
+test_start <- as.Date(split$test_start)
+cat("Train jusqu'au", split$train_end, "| test à partir du", split$test_start, "\n")
+
+tail(x[, c("btc_close", "btc_logp", "btc_ret", "btc_vol30")])
+```
+
+## 4. Graphiques
+
+```{r, fig.width=10, fig.height=7}
+events <- as.Date(c("2020-03-12", "2022-05-09", "2022-11-08", "2024-01-10"))   # COVID, Luna, FTX, ETF
+
+# prix + moyennes mobiles (échelle log)
+par(mfrow = c(2, 1), mar = c(3, 4, 2, 1))
+for (a in c("btc", "eth")) {
+  plot(index(x), as.numeric(x[, paste0(a, "_close")]), type = "l", log = "y",
+       xlab = "", ylab = paste(toupper(a), "(USD, log)"), main = paste(toupper(a), "- prix et moyennes mobiles"))
+  lines(index(x), as.numeric(x[, paste0(a, "_ma50")]), col = "orange")
+  lines(index(x), as.numeric(x[, paste0(a, "_ma200")]), col = "darkgreen")
+  abline(v = events, lty = 2, col = "grey")
+  legend("topleft", c("Clôture", "MA 50", "MA 200"), col = c("black", "orange", "darkgreen"), lty = 1, cex = 0.7)
+}
+```
+
+```{r, fig.width=10, fig.height=7}
+# rendements BTC + volatilité 30 j
+par(mfrow = c(2, 1), mar = c(3, 4, 2, 1))
+plot(index(x), as.numeric(x$btc_ret), type = "l", xlab = "", ylab = "Log-rendement BTC")
+abline(v = events, lty = 2, col = "grey")
+
+plot(index(x), as.numeric(x$eth_vol30), type = "l", col = "orange", xlab = "",
+     ylab = "Volatilité 30 j (annualisée)")
+lines(index(x), as.numeric(x$btc_vol30), col = "steelblue")
+legend("topright", c("ETH", "BTC"), col = c("orange", "steelblue"), lty = 1, cex = 0.7)
+```
+## 5. Statistiques descriptives
+
+```{r}
+desc <- do.call(rbind, lapply(c("btc", "eth"), function(a) {
+  r <- na.omit(as.numeric(x[, paste0(a, "_ret")]))
+  m <- mean(r); s <- sd(r)
+  jb <- jarque.bera.test(r)                                   # test de normalité
+  data.frame(actif = toupper(a), n = length(r), moyenne = m, ecart_type = s,
+             min = min(r), max = max(r),
+             skewness = mean((r - m)^3) / s^3,                # asymétrie
+             kurtosis = mean((r - m)^4) / s^4 - 3,            # excès de kurtosis
+             JB_pvalue = jb$p.value)
+}))
+dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+write.csv(desc, "results/tables/01_stats_descriptives_R.csv", row.names = FALSE)
+cat("Corrélation BTC/ETH :", round(cor(x$btc_ret, x$eth_ret, use = "complete.obs"), 3), "\n")
+print(desc, digits = 4)
+```
+
+## 6. Outliers (IQR glissant 90 j)
+
+```{r}
+outl <- do.call(rbind, lapply(c("btc", "eth"), function(a) {
+  r  <- x[, paste0(a, "_ret")]
+  q1 <- rollapplyr(r, 90, quantile, probs = 0.25, na.rm = TRUE, fill = NA)
+  q3 <- rollapplyr(r, 90, quantile, probs = 0.75, na.rm = TRUE, fill = NA)
+  iqr <- q3 - q1
+  i <- which(as.numeric(r) < as.numeric(q1 - 3 * iqr) | as.numeric(r) > as.numeric(q3 + 3 * iqr))
+  data.frame(actif = toupper(a), date = index(r)[i], rendement = round(as.numeric(r[i]), 4))
+}))
+write.csv(outl, "results/tables/01_outliers_R.csv", row.names = FALSE)
+table(outl$actif)                                  # nombre par actif
+head(outl[order(outl$rendement), ], 10)            # les 10 pires chocs
+```
+
+## 7. ACF / PACF
+
+```{r, fig.width=10, fig.height=8}
+for (a in c("btc", "eth")) {
+  lp <- na.omit(as.numeric(x[, paste0(a, "_logp")]))
+  r  <- na.omit(as.numeric(x[, paste0(a, "_ret")]))
+  par(mfrow = c(3, 2), mar = c(4, 4, 3, 1))
+  acf(lp, 40, main = paste(toupper(a), "ACF log-prix"));      pacf(lp, 40, main = "PACF log-prix")
+  acf(r, 40, main = "ACF rendements");                        pacf(r, 40, main = "PACF rendements")
+  acf(r^2, 40, main = "ACF rendements au carré");             pacf(r^2, 40, main = "PACF rendements au carré")
+}
+```
+
+## 8. Décomposition STL
+
+```{r, fig.width=10, fig.height=7}
+for (a in c("btc", "eth")) for (per in c(7, 365)) {
+  lp  <- ts(as.numeric(x[, paste0(a, "_logp")]), frequency = per)
+  fit <- stl(lp, s.window = "periodic", robust = TRUE)
+  sea <- fit$time.series[, "seasonal"]; rem <- fit$time.series[, "remainder"]
+  cat(toupper(a), "période", per, ": force saisonnalité =",
+      round(max(0, 1 - var(rem) / var(sea + rem)), 3), "\n")
+  plot(fit, main = paste("STL", toupper(a), "- période", per))
+}
+```
+
+## 9. Stationnarité : ADF et KPSS
+
+```{r}
+statio <- do.call(rbind, lapply(c("btc", "eth"), function(a) {
+  do.call(rbind, lapply(c("logp", "ret"), function(v) {
+    s   <- na.omit(as.numeric(x[, paste0(a, "_", v)]))
+    adf <- suppressWarnings(adf.test(s))                                         # H0 : racine unitaire
+    kp  <- suppressWarnings(kpss.test(s, null = if (v == "logp") "Trend" else "Level"))  # H0 : stationnaire
+    data.frame(actif = toupper(a), serie = ifelse(v == "logp", "log-prix", "log-rendement"),
+               ADF_p = round(adf$p.value, 4), KPSS_p = round(kp$p.value, 4),
+               conclusion = ifelse(adf$p.value < 0.05 & kp$p.value > 0.05, "stationnaire", "non stationnaire"))
+  }))
+}))
+write.csv(statio, "results/tables/01_stationnarite_R.csv", row.names = FALSE)
+statio
+```
+
+## Informations de session
+
+```{r}
+sessionInfo()      # versions de R et des packages (reproductibilité)
+```

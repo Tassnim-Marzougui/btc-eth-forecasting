@@ -1,0 +1,5 @@
+actif,modele,lookback,units,layers,dropout,batch,lr
+BTC,LSTM,30,32,1,0.3,64,0.001
+BTC,GRU,30,32,2,0.1,64,0.001
+ETH,LSTM,30,64,1,0.3,64,0.001
+ETH,GRU,30,64,1,0.1,64,0.001

@@ -1,0 +1,17 @@
+# Environnement Python du projet BTC/ETH (Python 3.11 recommandé ; testé aussi en 3.12/3.14 pour les scripts 06 et 07)
+# IMPORTANT : remplacer chaque ">=" par la version exacte installée chez vous (commande dans le README),
+# puis committer ce fichier : le plan du projet exige un requirements.txt avec versions figées.
+
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+matplotlib>=3.8
+statsmodels>=0.14      # ARIMA, SARIMAX, VAR, VECM, Johansen, tests de diagnostic
+arch>=6.2              # GARCH / EGARCH / GJR
+pmdarima>=2.0          # auto_arima (si conflit avec numpy 2 : installer numpy<2 ou le remplacer par une grille AIC statsmodels)
+scikit-learn>=1.3      # TimeSeriesSplit
+yfinance>=0.2          # téléchargement initial des données (le CSV est ensuite figé dans data/)
+jupyter>=1.0           # notebooks .ipynb
+
+# Deep learning (entraîné sur Kaggle GPU, où PyTorch est déjà installé)
+torch>=2.1

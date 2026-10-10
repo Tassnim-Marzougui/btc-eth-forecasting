@@ -1,0 +1,57 @@
+actif,modele1,modele2,h,DM_stat,p_value,n,conclusion_5%
+BTC,lstm,gru,tous (1-10),0.3017,0.7631,320,pas de différence significative
+BTC,lstm,gru,1,-0.9733,0.3379,32,pas de différence significative
+BTC,lstm,gru,5,-0.2225,0.8254,32,pas de différence significative
+BTC,lstm,gru,10,0.9146,0.3674,32,pas de différence significative
+BTC,lstm,naive,tous (1-10),1.803,0.0723,320,pas de différence significative
+BTC,lstm,naive,1,0.057,0.9549,32,pas de différence significative
+BTC,lstm,naive,5,1.073,0.2916,32,pas de différence significative
+BTC,lstm,naive,10,1.2399,0.2243,32,pas de différence significative
+BTC,gru,naive,tous (1-10),1.803,0.0723,320,pas de différence significative
+BTC,gru,naive,1,0.8895,0.3806,32,pas de différence significative
+BTC,gru,naive,5,1.1819,0.2462,32,pas de différence significative
+BTC,gru,naive,10,1.0362,0.3081,32,pas de différence significative
+BTC,lstm,arima_aic,tous (1-10),1.8505,0.0652,320,pas de différence significative
+BTC,lstm,arima_aic,1,0.085,0.9328,32,pas de différence significative
+BTC,lstm,arima_aic,5,1.2532,0.2195,32,pas de différence significative
+BTC,lstm,arima_aic,10,1.2394,0.2245,32,pas de différence significative
+BTC,lstm,arima_bic,tous (1-10),1.803,0.0723,320,pas de différence significative
+BTC,lstm,arima_bic,1,0.057,0.9549,32,pas de différence significative
+BTC,lstm,arima_bic,5,1.073,0.2916,32,pas de différence significative
+BTC,lstm,arima_bic,10,1.2399,0.2243,32,pas de différence significative
+BTC,gru,arima_aic,tous (1-10),1.8331,0.0677,320,pas de différence significative
+BTC,gru,arima_aic,1,0.7236,0.4747,32,pas de différence significative
+BTC,gru,arima_aic,5,1.3578,0.1843,32,pas de différence significative
+BTC,gru,arima_aic,10,1.0365,0.308,32,pas de différence significative
+BTC,gru,arima_bic,tous (1-10),1.803,0.0723,320,pas de différence significative
+BTC,gru,arima_bic,1,0.8895,0.3806,32,pas de différence significative
+BTC,gru,arima_bic,5,1.1819,0.2462,32,pas de différence significative
+BTC,gru,arima_bic,10,1.0362,0.3081,32,pas de différence significative
+ETH,lstm,gru,tous (1-10),0.9559,0.3398,320,pas de différence significative
+ETH,lstm,gru,1,1.1666,0.2523,32,pas de différence significative
+ETH,lstm,gru,5,0.7599,0.453,32,pas de différence significative
+ETH,lstm,gru,10,0.5052,0.617,32,pas de différence significative
+ETH,lstm,naive,tous (1-10),0.4482,0.6543,320,pas de différence significative
+ETH,lstm,naive,1,0.1665,0.8688,32,pas de différence significative
+ETH,lstm,naive,5,-0.3318,0.7423,32,pas de différence significative
+ETH,lstm,naive,10,0.5023,0.619,32,pas de différence significative
+ETH,gru,naive,tous (1-10),0.1422,0.887,320,pas de différence significative
+ETH,gru,naive,1,-0.2319,0.8181,32,pas de différence significative
+ETH,gru,naive,5,-0.4695,0.642,32,pas de différence significative
+ETH,gru,naive,10,0.3372,0.7382,32,pas de différence significative
+ETH,lstm,arima_bic,tous (1-10),0.4482,0.6543,320,pas de différence significative
+ETH,lstm,arima_bic,1,0.1665,0.8688,32,pas de différence significative
+ETH,lstm,arima_bic,5,-0.3318,0.7423,32,pas de différence significative
+ETH,lstm,arima_bic,10,0.5023,0.619,32,pas de différence significative
+ETH,lstm,arima_aic,tous (1-10),1.714,0.0875,320,pas de différence significative
+ETH,lstm,arima_aic,1,0.1147,0.9094,32,pas de différence significative
+ETH,lstm,arima_aic,5,1.7919,0.0829,32,pas de différence significative
+ETH,lstm,arima_aic,10,1.0196,0.3158,32,pas de différence significative
+ETH,gru,arima_bic,tous (1-10),0.1422,0.887,320,pas de différence significative
+ETH,gru,arima_bic,1,-0.2319,0.8181,32,pas de différence significative
+ETH,gru,arima_bic,5,-0.4695,0.642,32,pas de différence significative
+ETH,gru,arima_bic,10,0.3372,0.7382,32,pas de différence significative
+ETH,gru,arima_aic,tous (1-10),1.5417,0.1241,320,pas de différence significative
+ETH,gru,arima_aic,1,-0.3654,0.7173,32,pas de différence significative
+ETH,gru,arima_aic,5,1.3803,0.1774,32,pas de différence significative
+ETH,gru,arima_aic,10,0.9153,0.3671,32,pas de différence significative

@@ -1,0 +1,57 @@
+actif,modele,h,DM_stat,p_value,conclusion_5%
+BTC,drift,tous,1.746,0.0818,pas de différence significative
+BTC,drift,1,0.3739,0.711,pas de différence significative
+BTC,drift,5,1.8766,0.07,pas de différence significative
+BTC,drift,10,1.0026,0.3238,pas de différence significative
+BTC,arima_aic,tous,-0.9117,0.3626,pas de différence significative
+BTC,arima_aic,1,-0.0338,0.9733,pas de différence significative
+BTC,arima_aic,5,-0.8833,0.3838,pas de différence significative
+BTC,arima_aic,10,-0.4215,0.6763,pas de différence significative
+BTC,arima_bic,tous,,,identique à Naive (mêmes prévisions)
+BTC,arima_bic,1,,,identique à Naive (mêmes prévisions)
+BTC,arima_bic,5,,,identique à Naive (mêmes prévisions)
+BTC,arima_bic,10,,,identique à Naive (mêmes prévisions)
+BTC,lstm,tous,1.803,0.0723,pas de différence significative
+BTC,lstm,1,0.057,0.9549,pas de différence significative
+BTC,lstm,5,1.073,0.2916,pas de différence significative
+BTC,lstm,10,1.2399,0.2243,pas de différence significative
+BTC,gru,tous,1.803,0.0723,pas de différence significative
+BTC,gru,1,0.8895,0.3806,pas de différence significative
+BTC,gru,5,1.1819,0.2462,pas de différence significative
+BTC,gru,10,1.0362,0.3081,pas de différence significative
+BTC,var,tous,2.0707,0.0392,moins bon que Naive
+BTC,var,1,-1.3635,0.1826,pas de différence significative
+BTC,var,5,1.1353,0.2649,pas de différence significative
+BTC,var,10,1.8718,0.0707,pas de différence significative
+BTC,vecm,tous,2.5193,0.0122,moins bon que Naive
+BTC,vecm,1,-1.0581,0.2982,pas de différence significative
+BTC,vecm,5,2.494,0.0182,moins bon que Naive
+BTC,vecm,10,1.8256,0.0776,pas de différence significative
+ETH,drift,tous,1.8226,0.0693,pas de différence significative
+ETH,drift,1,0.7863,0.4377,pas de différence significative
+ETH,drift,5,1.2925,0.2057,pas de différence significative
+ETH,drift,10,0.968,0.3406,pas de différence significative
+ETH,arima_aic,tous,-1.2516,0.2116,pas de différence significative
+ETH,arima_aic,1,0.0541,0.9572,pas de différence significative
+ETH,arima_aic,5,-1.4984,0.1441,pas de différence significative
+ETH,arima_aic,10,-0.6396,0.5271,pas de différence significative
+ETH,arima_bic,tous,,,identique à Naive (mêmes prévisions)
+ETH,arima_bic,1,,,identique à Naive (mêmes prévisions)
+ETH,arima_bic,5,,,identique à Naive (mêmes prévisions)
+ETH,arima_bic,10,,,identique à Naive (mêmes prévisions)
+ETH,lstm,tous,0.4482,0.6543,pas de différence significative
+ETH,lstm,1,0.1665,0.8688,pas de différence significative
+ETH,lstm,5,-0.3318,0.7423,pas de différence significative
+ETH,lstm,10,0.5023,0.619,pas de différence significative
+ETH,gru,tous,0.1422,0.887,pas de différence significative
+ETH,gru,1,-0.2319,0.8181,pas de différence significative
+ETH,gru,5,-0.4695,0.642,pas de différence significative
+ETH,gru,10,0.3372,0.7382,pas de différence significative
+ETH,var,tous,-0.0612,0.9512,pas de différence significative
+ETH,var,1,-0.2596,0.7969,pas de différence significative
+ETH,var,5,-0.9189,0.3653,pas de différence significative
+ETH,var,10,1.1651,0.2529,pas de différence significative
+ETH,vecm,tous,2.5565,0.011,moins bon que Naive
+ETH,vecm,1,0.1498,0.8819,pas de différence significative
+ETH,vecm,5,1.275,0.2118,pas de différence significative
+ETH,vecm,10,1.6092,0.1177,pas de différence significative

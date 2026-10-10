@@ -1,0 +1,5 @@
+actif,serie,ADF_stat,ADF_p,KPSS_stat,KPSS_p,conclusion
+BTC,log-prix,-2.458,0.3494,0.386,0.01,non stationnaire
+BTC,log-rendement,-19.833,0.0,0.108,0.1,stationnaire
+ETH,log-prix,-2.344,0.4096,0.76,0.01,non stationnaire
+ETH,log-rendement,-17.178,0.0,0.125,0.1,stationnaire

@@ -1,0 +1,8 @@
+segment,alerte,extrait
+Prompt 1,classement : vérifier la significativité (Diebold-Mariano) avant de conclure,"ARIMA(0,1,0) est retenu par le BIC pour BTC et ETH, et le Naive obtient un RMSE de 3607 (BTC) / 145,0 (ETH), très proche ou meilleur que la plupart des modèles."
+Prompt 1,classement : vérifier la significativité (Diebold-Mariano) avant de conclure,"Les termes d’asymétrie (GJR, EGARCH) ont des p-values entre 0,66 et 1,0, et le GARCH(1,1) est retenu car les ordres supérieurs n’améliorent pas le BIC. Les résidus au carré ne présentent plus d’autocorrélation (Ljung-Box"
+Prompt 1,"causalité ? Granger = causalité prédictive, pas économique","Malgré une corrélation très élevée, la dynamique de court terme est asymétrique (ETH mène davantage BTC)."
+Relance 2,affirmation de victoire : doit être appuyée par un test DM,"En résumé : les cours bougent beaucoup ensemble, restent imprévisibles, et la simplicité bat souvent la complexité."
+Relance 3,classement : vérifier la significativité (Diebold-Mariano) avant de conclure,"Privilégiez la méthode naïve (« le prix demain ≈ le prix d’aujourd’hui ») ou un ARIMA simple. Ces approches donnent les meilleurs RMSE (Naive 3607 pour BTC et 145,0 pour ETH ; ARIMA légèrement meilleur) et ne sont pas si"
+Relance 3,classement : vérifier la significativité (Diebold-Mariano) avant de conclure,"Utilisez un GARCH(1,1) symétrique. Il est retenu par le BIC, fournit le meilleur QLIKE (2,756 vs 2,828 pour l’EWMA sur BTC ; 3,433 vs 3,484 sur ETH) et produit une VaR 5 % acceptable (4,1 % et 3,1 % de violations, test d"
+Relance 3,interprétation des courbes plates à discuter : absence de signal vs entraînement insuffisant,"Les réseaux de neurones restent bloqués à une perte MSE ≈ 1, suggérant un apprentissage insuffisant."
